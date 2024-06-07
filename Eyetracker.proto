@@ -1,0 +1,176 @@
+/**
+* GazeFirst eye tracker service protocol
+* (c) 2023 - 2024 GazeFirst GmbH
+* Author: Mathias Anhalt
+*/
+
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+package GazeFirst;
+
+/**
+ * Eyetracker service
+ */
+service Eyetracker {
+	rpc Calibrate (stream CalibrationControl) returns (stream CalibrationStatus); // Calibrate device for user. Client should close stream when done.
+	rpc SubscribePositioning (google.protobuf.Empty) returns (stream Positioning); // Subscribe to positioning data. Client should close stream when done.
+	rpc SubscribeGaze (GazeSubscription) returns (stream GazeData); // Subscribe to gaze data. Client should close stream when done.	
+	rpc Configure (Configuration) returns (Settings); // Configure the device.
+	rpc GetDeviceInfo (google.protobuf.Empty) returns (DeviceInformation); // Get device information.
+}
+
+/**
+ * CalibrationStatus message
+ */
+message CalibrationStatus {
+	//Status enum
+	enum Status {
+		STARTED = 0; //Started the calibration / currently running. Check calibrationPoint payload for point data and status of it. Stream is open and active.
+		FAILED = 1; //Calibration failed, will keep current calibration. Stream will close.
+		SUCCEEDED = 2; //Calibration was successfull. Check calibrationResult payload for result. Stream stays open for future features (improve points). Client should close it when done!
+	}
+	Status status = 1; // Calibration status
+	CalibrationPointMessage calibrationPoint = 2; // Calibration point message
+	CalibrationResult calibrationResult = 3; // Calibration result
+}
+
+/**
+ * CalibrationResult message
+ */
+message CalibrationResult {
+	int32 overallPercentageRating = 1;  // Overall percentage rating ( 0 - 100)
+	repeated int32 percentageRatings = 2;   //list of ints with percentage ratings per point ( 0 - 100)
+	repeated int32 percentageRatingsLeft = 3;   //list of ints with percentage ratings per point on left eye ( 0 - 100)
+	repeated int32 percentageRatingsRight = 4;  //list of ints with percentage ratings per point on right eye ( 0 - 100)
+}
+
+/**
+ * Calibration Point message
+ */
+message CalibrationPointMessage {
+	enum PointState {
+		SHOW = 0; //GUI should show the point
+		ANIMATE = 1; //GUI should animate the point
+		HIDE = 2; // GUI should hide the point
+	}
+	int32 sequence = 1; // Sequence number of calibration point, starting at 0
+	NormedPoint2D position = 2; // Calibration point position on screen
+	PointState state = 3; // Calibration point state
+}
+
+/**
+ * CalibrationControl message
+ */
+message CalibrationControl {
+	// Control enum
+	enum Control {
+		START = 0; //Signal that a calibration should start
+		STOP = 1; //Signal that a calibration should stop
+	}
+	// Calibration Points (count) enum
+	enum CalibrationPoints {
+		NINE = 0; // Nine point is default and mostly best
+		ONE = 1; 
+		FIVE = 2;         
+		THIRTEEN = 3; // - Do not use yet -
+		ZERO = 4; //Zero basically resets to a default calibration (only use this if user can not focus calibration points)
+	}
+	Control control = 1; // Control message
+	CalibrationPoints calibrationPoints = 2; // Number of calibration points
+	ScreenSize size = 3; // Screen size in mm
+}
+
+/**
+ * GazeSubscription message
+ */
+message GazeSubscription {
+	bool unfiltered = 1; // If true, unfiltered gaze data will be streamed
+}
+
+/**
+ * GazeData message
+ */
+message GazeData {
+	int64 timestamp = 1; // Timestamp of gaze data
+	NormedPoint2D gazePoint = 2; // Combined gaze point
+	NormedPoint2D leftEye = 3; // Left eye gaze point
+	NormedPoint2D rightEye = 4; // Right eye gaze point
+	bool fixation = 5; // True if gaze is fixated
+	bool userPresent = 6; // True if user is present (normally yes). Device will send false with empty data once till a user gets redetected.
+	bool leftEyeOpen = 7; // True if left eye is open / false if closed or user is not present 
+	bool rightEyeOpen = 8; // True if right eye is open / false if closed or user is not present  
+}
+
+/**
+ * NormedPoint2D message
+ */
+message NormedPoint2D {
+	double x = 1; //X coordinate (0 - 1d)
+	double y = 2; //Y coordinate (0 - 1d)
+	bool invalid = 3; //True if this point is not valid
+}
+
+/**
+ * Settings message
+ */
+message Settings {
+	ScreenSize size = 1; // Screen size in mm
+	UserSettings userSettings = 2; // User settings
+	DeviceSettings deviceSettings = 3; // Device settings
+}
+
+/**
+ * DeviceSettings message
+ */
+message DeviceSettings {
+	bool update = 1; // Set to true if the settings should be updated
+	bool pauseNative = 2; // If true, native device processing is paused (e.g. on HID / USB)
+	bool pauseAPIGaze = 3; // If true, gaze processing (API wise) is paused
+}
+
+/**
+ * UserSettings message
+ */
+message UserSettings {
+	bool update = 1; // Set to true if the settings should be updated
+	int32 smoothing = 2; // 1 to 10, 1 is less smoothing, 10 is max smoothing
+	bool leftEyeOnly = 3; // If true, only left eye data is used
+	bool rightEyeOnly = 4; // If true, only right eye data is used
+}
+
+/**
+ * Positioning message
+ */
+message Positioning {
+	double depthInMM = 1;
+	NormedPoint2D leftEyePos = 2;
+	NormedPoint2D rightEyePos = 3;
+}
+
+/**
+ * ScreenSize message
+ */
+message ScreenSize {
+	double width_mm = 1; // Screen dimensions in mm
+	double height_mm = 2; // Screen dimensions in mm
+}
+
+/**
+ * DeviceInformation message
+ */
+message DeviceInformation {
+	int64 serial = 1; // Serial of device
+	string version = 2; // Firmware version string
+	int32 hwConfig = 3; // Configuration ID of hardware
+	string machine = 4; // Machine version string
+}
+
+/**
+ * Configuration message
+ */
+message Configuration {
+	oneof message {
+		google.protobuf.Empty empty = 1; // Empty message
+		Settings settings = 2; // Settings message
+	}
+}
