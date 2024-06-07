@@ -8,7 +8,7 @@
 Protocol buffers file to interface with eyetuitive, a remote eye tracker made by GazeFirst.
 <br/>
 <br/>
-<a href="https://github.com/gazefirst/protocol/Documentation.md"><strong>Explore the docs »</strong></a>
+<a href="https://github.com/gazefirst/protocol/blob/main/Documentation.md"><strong>Explore the docs »</strong></a>
 <br/>
 <br/>
 <a href="https://github.com/gazefirst/protocol/issues/new?labels=bug">Report Bug .</a>
