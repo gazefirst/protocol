@@ -48,6 +48,11 @@ CalibrationControl message
 | control | [CalibrationControl.Control](#GazeFirst-CalibrationControl-Control) |  | Control message |
 | calibrationPoints | [CalibrationControl.CalibrationPoints](#GazeFirst-CalibrationControl-CalibrationPoints) |  | Number of calibration points |
 | size | [ScreenSize](#GazeFirst-ScreenSize) |  | Screen size in mm |
+| multipoint | [bool](#bool) |  | If true, multiple points will be displayed at the same time - also fixationBased will be forced to true. If false, only one point will be displayed at a time. |
+| fixationBased | [bool](#bool) |  | If true, calibration is fixation based: |
+| pointsToImprove | [int32](#int32) | repeated | on fixation detection (near or at target) state will be changed to ANIMATE, on fixation loss state will be changed to SHOW, after a certain amount of time / enough samples state will be changed to HIDE
+
+List of points (their sequence number) that should be recalibrated / improved |
 
 
 
@@ -83,6 +88,7 @@ CalibrationResult message
 | percentageRatings | [int32](#int32) | repeated | list of ints with percentage ratings per point ( 0 - 100) |
 | percentageRatingsLeft | [int32](#int32) | repeated | list of ints with percentage ratings per point on left eye ( 0 - 100) |
 | percentageRatingsRight | [int32](#int32) | repeated | list of ints with percentage ratings per point on right eye ( 0 - 100) |
+| canImprove | [bool](#bool) |  | Signals if the calibration can be improved (if false do not send Control.Improve!) |
 
 
 
@@ -151,6 +157,7 @@ DeviceSettings message
 | update | [bool](#bool) |  | Set to true if the settings should be updated |
 | pauseNative | [bool](#bool) |  | If true, native device processing is paused (e.g. on HID / USB) |
 | pauseAPIGaze | [bool](#bool) |  | If true, gaze processing (API wise) is paused |
+| enablePauseByGaze | [bool](#bool) |  | If true, eyetracker native gaze data will be paused by looking into the eyetracker camera (center of screen) |
 
 
 
@@ -219,9 +226,12 @@ Positioning message
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| depthInMM | [double](#double) |  |  |
-| leftEyePos | [NormedPoint2D](#GazeFirst-NormedPoint2D) |  |  |
-| rightEyePos | [NormedPoint2D](#GazeFirst-NormedPoint2D) |  |  |
+| depthInMM | [double](#double) |  | Distance in mm: Values usually range from 450mm to 800mm (45cm to 80cm). User distance from 550mm to 650mm is perfect, 500mm to 550mm and 650mm to 700mm are acceptable. |
+| leftEyePos | [NormedPoint2D](#GazeFirst-NormedPoint2D) |  | Left eye position |
+| rightEyePos | [NormedPoint2D](#GazeFirst-NormedPoint2D) |  | Right eye position |
+| leftEyeClosed | [bool](#bool) |  | True if left eye is closed / false if open |
+| rightEyeClosed | [bool](#bool) |  | True if right eye is closed / false if open |
+| gazeIsPaused | [bool](#bool) |  | True if gaze is paused (user needs to look into the eyetracker camera to unpause) |
 
 
 
@@ -305,6 +315,7 @@ Control enum
 | ---- | ------ | ----------- |
 | START | 0 | Signal that a calibration should start |
 | STOP | 1 | Signal that a calibration should stop |
+| IMPROVE | 3 | Improve given points (pointsToImprove) |
 
 
 
@@ -316,7 +327,7 @@ Control enum
 | Name | Number | Description |
 | ---- | ------ | ----------- |
 | SHOW | 0 | GUI should show the point |
-| ANIMATE | 1 | GUI should animate the point |
+| ANIMATE | 1 | GUI should animate the point (eye tracker samples calibration data in this state only) |
 | HIDE | 2 | GUI should hide the point |
 
 

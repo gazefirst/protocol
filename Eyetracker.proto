@@ -2,6 +2,7 @@
 * GazeFirst eye tracker service protocol
 * (c) 2023 - 2024 GazeFirst GmbH
 * Author: Mathias Anhalt
+* Last updated: 02.10.2024
 */
 
 syntax = "proto3";
@@ -42,6 +43,7 @@ message CalibrationResult {
 	repeated int32 percentageRatings = 2;   //list of ints with percentage ratings per point ( 0 - 100)
 	repeated int32 percentageRatingsLeft = 3;   //list of ints with percentage ratings per point on left eye ( 0 - 100)
 	repeated int32 percentageRatingsRight = 4;  //list of ints with percentage ratings per point on right eye ( 0 - 100)
+	bool canImprove = 5; // Signals if the calibration can be improved (if false do not send Control.Improve!)
 }
 
 /**
@@ -50,7 +52,7 @@ message CalibrationResult {
 message CalibrationPointMessage {
 	enum PointState {
 		SHOW = 0; //GUI should show the point
-		ANIMATE = 1; //GUI should animate the point
+		ANIMATE = 1; //GUI should animate the point (eye tracker samples calibration data in this state only)
 		HIDE = 2; // GUI should hide the point
 	}
 	int32 sequence = 1; // Sequence number of calibration point, starting at 0
@@ -66,6 +68,7 @@ message CalibrationControl {
 	enum Control {
 		START = 0; //Signal that a calibration should start
 		STOP = 1; //Signal that a calibration should stop
+		IMPROVE = 3; // Improve given points (pointsToImprove)
 	}
 	// Calibration Points (count) enum
 	enum CalibrationPoints {
@@ -78,6 +81,12 @@ message CalibrationControl {
 	Control control = 1; // Control message
 	CalibrationPoints calibrationPoints = 2; // Number of calibration points
 	ScreenSize size = 3; // Screen size in mm
+	bool multipoint = 4; // If true, multiple points will be displayed at the same time - also fixationBased will be forced to true. If false, only one point will be displayed at a time.
+	bool fixationBased = 5; // If true, calibration is fixation based: 
+							// on fixation detection (near or at target) state will be changed to ANIMATE, 
+							// on fixation loss state will be changed to SHOW,
+							// after a certain amount of time / enough samples state will be changed to HIDE
+	repeated int32 pointsToImprove = 7; // List of points (their sequence number) that should be recalibrated / improved
 }
 
 /**
@@ -126,6 +135,7 @@ message DeviceSettings {
 	bool update = 1; // Set to true if the settings should be updated
 	bool pauseNative = 2; // If true, native device processing is paused (e.g. on HID / USB)
 	bool pauseAPIGaze = 3; // If true, gaze processing (API wise) is paused
+	bool enablePauseByGaze = 10; //If true, eyetracker native gaze data will be paused by looking into the eyetracker camera (center of screen)
 }
 
 /**
@@ -142,9 +152,12 @@ message UserSettings {
  * Positioning message
  */
 message Positioning {
-	double depthInMM = 1;
-	NormedPoint2D leftEyePos = 2;
-	NormedPoint2D rightEyePos = 3;
+	double depthInMM = 1; //Distance in mm: Values usually range from 450mm to 800mm (45cm to 80cm). User distance from 550mm to 650mm is perfect, 500mm to 550mm and 650mm to 700mm are acceptable.
+	NormedPoint2D leftEyePos = 2; //Left eye position
+	NormedPoint2D rightEyePos = 3; //Right eye position
+	bool leftEyeClosed = 4; // True if left eye is closed / false if open
+	bool rightEyeClosed = 5; // True if right eye is closed / false if open
+	bool gazeIsPaused = 6; // True if gaze is paused (user needs to look into the eyetracker camera to unpause)
 }
 
 /**
