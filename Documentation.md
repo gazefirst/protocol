@@ -15,14 +15,23 @@
     - [GazeSubscription](#GazeFirst-GazeSubscription)
     - [NormedPoint2D](#GazeFirst-NormedPoint2D)
     - [Positioning](#GazeFirst-Positioning)
+    - [RawFrame](#GazeFirst-RawFrame)
     - [ScreenSize](#GazeFirst-ScreenSize)
     - [Settings](#GazeFirst-Settings)
+    - [StreamUsersRequest](#GazeFirst-StreamUsersRequest)
+    - [User](#GazeFirst-User)
+    - [UserProfileRequest](#GazeFirst-UserProfileRequest)
+    - [UserProfileResponse](#GazeFirst-UserProfileResponse)
     - [UserSettings](#GazeFirst-UserSettings)
+    - [UserStreamResponse](#GazeFirst-UserStreamResponse)
   
     - [CalibrationControl.CalibrationPoints](#GazeFirst-CalibrationControl-CalibrationPoints)
     - [CalibrationControl.Control](#GazeFirst-CalibrationControl-Control)
     - [CalibrationPointMessage.PointState](#GazeFirst-CalibrationPointMessage-PointState)
     - [CalibrationStatus.Status](#GazeFirst-CalibrationStatus-Status)
+    - [DeviceSettings.Framerate](#GazeFirst-DeviceSettings-Framerate)
+    - [UserProfileRequest.OperationType](#GazeFirst-UserProfileRequest-OperationType)
+    - [UserProfileResponse.Status](#GazeFirst-UserProfileResponse-Status)
   
     - [Eyetracker](#GazeFirst-Eyetracker)
   
@@ -53,6 +62,8 @@ CalibrationControl message
 | pointsToImprove | [int32](#int32) | repeated | on fixation detection (near or at target) state will be changed to ANIMATE, on fixation loss state will be changed to SHOW, after a certain amount of time / enough samples state will be changed to HIDE
 
 List of points (their sequence number) that should be recalibrated / improved |
+| manualCalibration | [bool](#bool) |  | Manual calibration: client needs to confirm every point by sending Control.CONFIRM - multipoint and fixationBased will be ignored |
+| timestamp | [int64](#int64) |  | Timestamp (unix time) of calibration - set to starting time when sending START |
 
 
 
@@ -89,6 +100,8 @@ CalibrationResult message
 | percentageRatingsLeft | [int32](#int32) | repeated | list of ints with percentage ratings per point on left eye ( 0 - 100) |
 | percentageRatingsRight | [int32](#int32) | repeated | list of ints with percentage ratings per point on right eye ( 0 - 100) |
 | canImprove | [bool](#bool) |  | Signals if the calibration can be improved (if false do not send Control.Improve!) |
+| uid | [bytes](#bytes) |  | Unique ID of this calibration and its result - fixed to 16 bytes length |
+| timestamp | [int64](#int64) |  | Timestamp (unix time) of calibration |
 
 
 
@@ -158,6 +171,7 @@ DeviceSettings message
 | pauseNative | [bool](#bool) |  | If true, native device processing is paused (e.g. on HID / USB) |
 | pauseAPIGaze | [bool](#bool) |  | If true, gaze processing (API wise) is paused |
 | enablePauseByGaze | [bool](#bool) |  | If true, eyetracker native gaze data will be paused by looking into the eyetracker camera (center of screen) |
+| framerate | [DeviceSettings.Framerate](#GazeFirst-DeviceSettings-Framerate) |  | Configure framerate |
 
 
 
@@ -172,7 +186,7 @@ GazeData message
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| timestamp | [int64](#int64) |  | Timestamp of gaze data |
+| timestamp | [int64](#int64) |  | Timestamp (internal device time) of gaze data |
 | gazePoint | [NormedPoint2D](#GazeFirst-NormedPoint2D) |  | Combined gaze point |
 | leftEye | [NormedPoint2D](#GazeFirst-NormedPoint2D) |  | Left eye gaze point |
 | rightEye | [NormedPoint2D](#GazeFirst-NormedPoint2D) |  | Right eye gaze point |
@@ -212,6 +226,8 @@ NormedPoint2D message
 | x | [double](#double) |  | X coordinate (0 - 1d) |
 | y | [double](#double) |  | Y coordinate (0 - 1d) |
 | invalid | [bool](#bool) |  | True if this point is not valid |
+| hasConfidence | [bool](#bool) |  | True, if this point has a confidence value |
+| confidence | [double](#double) |  | Confidence (0 - 1d) |
 
 
 
@@ -232,6 +248,25 @@ Positioning message
 | leftEyeClosed | [bool](#bool) |  | True if left eye is closed / false if open |
 | rightEyeClosed | [bool](#bool) |  | True if right eye is closed / false if open |
 | gazeIsPaused | [bool](#bool) |  | True if gaze is paused (user needs to look into the eyetracker camera to unpause) |
+
+
+
+
+
+
+<a name="GazeFirst-RawFrame"></a>
+
+### RawFrame
+RawFrame message
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| width | [int32](#int32) |  | Frame width |
+| height | [int32](#int32) |  | Frame height |
+| channels | [int32](#int32) |  | Number of channels |
+| data | [bytes](#bytes) |  | Data as bytes (size = width * height * channels) |
+| timestamp | [int64](#int64) |  | Timestamp (internal device time) of frame capture |
 
 
 
@@ -271,6 +306,71 @@ Settings message
 
 
 
+<a name="GazeFirst-StreamUsersRequest"></a>
+
+### StreamUsersRequest
+Request message for streaming user profiles
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| stayOpen | [bool](#bool) |  | If true, the stream stays open to inform about changes. |
+
+
+
+
+
+
+<a name="GazeFirst-User"></a>
+
+### User
+Message representing a user profile
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| userID | [int32](#int32) |  | Automatically generated identifier. |
+| username | [string](#string) |  | User&#39;s chosen username. |
+| uid | [bytes](#bytes) |  | Unique ID of this user, also device specific - fixed to 16 bytes length |
+
+
+
+
+
+
+<a name="GazeFirst-UserProfileRequest"></a>
+
+### UserProfileRequest
+Request message for managing user profiles
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| operation | [UserProfileRequest.OperationType](#GazeFirst-UserProfileRequest-OperationType) |  | The type of operation to perform |
+| userID | [int32](#int32) |  | Unique identifier for the user |
+| username | [string](#string) |  | Username for CREATE and UPDATE operations. |
+
+
+
+
+
+
+<a name="GazeFirst-UserProfileResponse"></a>
+
+### UserProfileResponse
+Response message including the status and information about the user.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| status | [UserProfileResponse.Status](#GazeFirst-UserProfileResponse-Status) |  | Status of the operation. |
+| user | [User](#GazeFirst-User) |  | User profile information, included for CREATE, UPDATE and SELECT. |
+
+
+
+
+
+
 <a name="GazeFirst-UserSettings"></a>
 
 ### UserSettings
@@ -283,6 +383,22 @@ UserSettings message
 | smoothing | [int32](#int32) |  | 1 to 10, 1 is less smoothing, 10 is max smoothing |
 | leftEyeOnly | [bool](#bool) |  | If true, only left eye data is used |
 | rightEyeOnly | [bool](#bool) |  | If true, only right eye data is used |
+
+
+
+
+
+
+<a name="GazeFirst-UserStreamResponse"></a>
+
+### UserStreamResponse
+Message for user stream responses
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| user | [User](#GazeFirst-User) |  | User profile information. |
+| isActive | [bool](#bool) |  | Indicates if this is the currently active user. |
 
 
 
@@ -301,7 +417,7 @@ Calibration Points (count) enum
 | NINE | 0 | Nine point is default and mostly best |
 | ONE | 1 |  |
 | FIVE | 2 |  |
-| THIRTEEN | 3 | - Do not use yet - |
+| THIRTEEN | 3 |  |
 | ZERO | 4 | Zero basically resets to a default calibration (only use this if user can not focus calibration points) |
 
 
@@ -316,6 +432,7 @@ Control enum
 | START | 0 | Signal that a calibration should start |
 | STOP | 1 | Signal that a calibration should stop |
 | IMPROVE | 3 | Improve given points (pointsToImprove) |
+| CONFIRM | 4 | Confirm last point (only valid when manualCalibration = true) |
 
 
 
@@ -344,6 +461,45 @@ Status enum
 | SUCCEEDED | 2 | Calibration was successfull. Check calibrationResult payload for result. Stream stays open for future features (improve points). Client should close it when done! |
 
 
+
+<a name="GazeFirst-DeviceSettings-Framerate"></a>
+
+### DeviceSettings.Framerate
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| FPS30 | 0 | 30 Hz |
+| FPS60 | 1 | 60 Hz |
+
+
+
+<a name="GazeFirst-UserProfileRequest-OperationType"></a>
+
+### UserProfileRequest.OperationType
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| CREATE | 0 | Create a new user - pass username |
+| UPDATE | 1 | Update (rename) an user - pass userID and username |
+| DELETE | 2 | Delete an user - pass userID |
+| SELECT | 3 | Select (activate) an user and its settings / calibration - pass userID |
+
+
+
+<a name="GazeFirst-UserProfileResponse-Status"></a>
+
+### UserProfileResponse.Status
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| SUCCESS | 0 | Operation was successfull (CREATE, UPDATE, DELETE, SELECT) |
+| NOT_FOUND | 1 | User was not found (UPDATE, DELETE, SELECT) |
+| FAILED | 2 | Operation failed (CREATE) |
+
+
  
 
  
@@ -361,6 +517,10 @@ Eyetracker service
 | SubscribeGaze | [GazeSubscription](#GazeFirst-GazeSubscription) | [GazeData](#GazeFirst-GazeData) stream | Subscribe to gaze data. Client should close stream when done. |
 | Configure | [Configuration](#GazeFirst-Configuration) | [Settings](#GazeFirst-Settings) | Configure the device. |
 | GetDeviceInfo | [.google.protobuf.Empty](#google-protobuf-Empty) | [DeviceInformation](#GazeFirst-DeviceInformation) | Get device information. |
+| SubscribeRawVideo | [.google.protobuf.Empty](#google-protobuf-Empty) | [RawFrame](#GazeFirst-RawFrame) stream | Subscribe to raw video frames. Client should close stream when done. |
+| ManageUserProfile | [UserProfileRequest](#GazeFirst-UserProfileRequest) | [UserProfileResponse](#GazeFirst-UserProfileResponse) | Manage user profiles. |
+| StreamUsers | [StreamUsersRequest](#GazeFirst-StreamUsersRequest) | [UserStreamResponse](#GazeFirst-UserStreamResponse) stream | Stream all user profiles and optionally keep the stream open for updates. |
+| GetLastCalibrationResult | [.google.protobuf.Empty](#google-protobuf-Empty) | [CalibrationResult](#GazeFirst-CalibrationResult) | Get the last calibration result |
 
  
 

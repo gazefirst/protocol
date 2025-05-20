@@ -1,8 +1,8 @@
 /**
 * GazeFirst eye tracker service protocol
-* (c) 2023 - 2024 GazeFirst GmbH
+* (c) 2023 - 2025 GazeFirst GmbH
 * Author: Mathias Anhalt
-* Last updated: 02.10.2024
+* Last updated: 19.05.2025
 */
 
 syntax = "proto3";
@@ -18,6 +18,10 @@ service Eyetracker {
 	rpc SubscribeGaze (GazeSubscription) returns (stream GazeData); // Subscribe to gaze data. Client should close stream when done.	
 	rpc Configure (Configuration) returns (Settings); // Configure the device.
 	rpc GetDeviceInfo (google.protobuf.Empty) returns (DeviceInformation); // Get device information.
+	rpc SubscribeRawVideo (google.protobuf.Empty) returns (stream RawFrame); // Subscribe to raw video frames. Client should close stream when done.	
+	rpc ManageUserProfile(UserProfileRequest) returns (UserProfileResponse); // Manage user profiles.
+	rpc StreamUsers(StreamUsersRequest) returns (stream UserStreamResponse); // Stream all user profiles and optionally keep the stream open for updates.	
+	rpc GetLastCalibrationResult(google.protobuf.Empty) returns (CalibrationResult); //Get the last calibration result
 }
 
 /**
@@ -44,6 +48,8 @@ message CalibrationResult {
 	repeated int32 percentageRatingsLeft = 3;   //list of ints with percentage ratings per point on left eye ( 0 - 100)
 	repeated int32 percentageRatingsRight = 4;  //list of ints with percentage ratings per point on right eye ( 0 - 100)
 	bool canImprove = 5; // Signals if the calibration can be improved (if false do not send Control.Improve!)
+	bytes uid = 6; // Unique ID of this calibration and its result - fixed to 16 bytes length
+	int64 timestamp = 7; // Timestamp (unix time) of calibration
 }
 
 /**
@@ -69,13 +75,14 @@ message CalibrationControl {
 		START = 0; //Signal that a calibration should start
 		STOP = 1; //Signal that a calibration should stop
 		IMPROVE = 3; // Improve given points (pointsToImprove)
+		CONFIRM = 4; // Confirm last point (only valid when manualCalibration = true)
 	}
 	// Calibration Points (count) enum
 	enum CalibrationPoints {
 		NINE = 0; // Nine point is default and mostly best
 		ONE = 1; 
 		FIVE = 2;         
-		THIRTEEN = 3; // - Do not use yet -
+		THIRTEEN = 3;
 		ZERO = 4; //Zero basically resets to a default calibration (only use this if user can not focus calibration points)
 	}
 	Control control = 1; // Control message
@@ -87,6 +94,8 @@ message CalibrationControl {
 							// on fixation loss state will be changed to SHOW,
 							// after a certain amount of time / enough samples state will be changed to HIDE
 	repeated int32 pointsToImprove = 7; // List of points (their sequence number) that should be recalibrated / improved
+	bool manualCalibration = 9; // Manual calibration: client needs to confirm every point by sending Control.CONFIRM - multipoint and fixationBased will be ignored
+	int64 timestamp = 10; // Timestamp (unix time) of calibration - set to starting time when sending START
 }
 
 /**
@@ -100,7 +109,7 @@ message GazeSubscription {
  * GazeData message
  */
 message GazeData {
-	int64 timestamp = 1; // Timestamp of gaze data
+	int64 timestamp = 1; // Timestamp (internal device time) of gaze data
 	NormedPoint2D gazePoint = 2; // Combined gaze point
 	NormedPoint2D leftEye = 3; // Left eye gaze point
 	NormedPoint2D rightEye = 4; // Right eye gaze point
@@ -117,6 +126,8 @@ message NormedPoint2D {
 	double x = 1; //X coordinate (0 - 1d)
 	double y = 2; //Y coordinate (0 - 1d)
 	bool invalid = 3; //True if this point is not valid
+	bool hasConfidence = 4; //True, if this point has a confidence value
+	double confidence = 5; //Confidence (0 - 1d)
 }
 
 /**
@@ -132,10 +143,15 @@ message Settings {
  * DeviceSettings message
  */
 message DeviceSettings {
+	enum Framerate {
+		FPS30 = 0; //30 Hz
+		FPS60 = 1; //60 Hz
+	}
 	bool update = 1; // Set to true if the settings should be updated
 	bool pauseNative = 2; // If true, native device processing is paused (e.g. on HID / USB)
 	bool pauseAPIGaze = 3; // If true, gaze processing (API wise) is paused
 	bool enablePauseByGaze = 10; //If true, eyetracker native gaze data will be paused by looking into the eyetracker camera (center of screen)
+	Framerate framerate = 12; //Configure framerate
 }
 
 /**
@@ -186,4 +202,67 @@ message Configuration {
 		google.protobuf.Empty empty = 1; // Empty message
 		Settings settings = 2; // Settings message
 	}
+}
+
+/**
+ * Request message for managing user profiles
+ */
+message UserProfileRequest {
+	enum OperationType {
+		CREATE = 0; // Create a new user - pass username
+		UPDATE = 1; // Update (rename) an user - pass userID and username
+		DELETE = 2; // Delete an user - pass userID
+		SELECT = 3; // Select (activate) an user and its settings / calibration - pass userID
+	}
+	OperationType operation = 1; // The type of operation to perform
+	int32 userID = 2; // Unique identifier for the user
+	string username = 3; // Username for CREATE and UPDATE operations.
+}
+
+/**
+ * Response message including the status and information about the user.
+ */
+message UserProfileResponse {
+	enum Status {
+		SUCCESS = 0; // Operation was successfull (CREATE, UPDATE, DELETE, SELECT)
+		NOT_FOUND = 1; // User was not found (UPDATE, DELETE, SELECT)
+		FAILED = 2; // Operation failed (CREATE)
+	}
+	Status status = 1; // Status of the operation.
+	User user = 2; // User profile information, included for CREATE, UPDATE and SELECT.
+}
+
+/**
+* Message representing a user profile
+*/
+message User {
+	int32 userID = 1; // Automatically generated identifier.
+	string username = 2; // User's chosen username.
+	bytes uid = 3; // Unique ID of this user, also device specific - fixed to 16 bytes length
+}
+
+/**
+*  Request message for streaming user profiles
+*/
+message StreamUsersRequest {
+	bool stayOpen = 1; // If true, the stream stays open to inform about changes.
+}
+
+/**
+* Message for user stream responses
+*/
+message UserStreamResponse {
+	User user = 1; // User profile information.
+	bool isActive = 2; // Indicates if this is the currently active user.
+}
+
+/**
+* RawFrame message
+*/
+message RawFrame {
+	int32 width = 1; // Frame width
+	int32 height = 2; // Frame height
+	int32 channels = 3; //Number of channels
+	bytes data = 4; // Data as bytes (size = width * height * channels)
+	int64 timestamp = 5; // Timestamp (internal device time) of frame capture
 }
