@@ -137,6 +137,18 @@ message Settings {
 	ScreenSize size = 1; // Screen size in mm
 	UserSettings userSettings = 2; // User settings
 	DeviceSettings deviceSettings = 3; // Device settings
+	HostSettings hostSettings = 5; //Host settings
+}
+
+/**
+ * HostSettings message
+ * Note: only for customized platform-dependent functions - these values do not have to be set.
+ */
+message HostSettings {
+	bool update = 1; // Set to true if the settings should be updated
+	string model = 2; // Model
+	string manufacturer = 3; // Manufacturer
+	string platform = 4; // Platform
 }
 
 /**
@@ -192,6 +204,7 @@ message DeviceInformation {
 	string version = 2; // Firmware version string
 	int32 hwConfig = 3; // Configuration ID of hardware
 	string machine = 4; // Machine version string
+	double cpuTemp = 5; // CPU core temp in °C
 }
 
 /**

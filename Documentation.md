@@ -13,6 +13,7 @@
     - [DeviceSettings](#GazeFirst-DeviceSettings)
     - [GazeData](#GazeFirst-GazeData)
     - [GazeSubscription](#GazeFirst-GazeSubscription)
+    - [HostSettings](#GazeFirst-HostSettings)
     - [NormedPoint2D](#GazeFirst-NormedPoint2D)
     - [Positioning](#GazeFirst-Positioning)
     - [RawFrame](#GazeFirst-RawFrame)
@@ -153,6 +154,7 @@ DeviceInformation message
 | version | [string](#string) |  | Firmware version string |
 | hwConfig | [int32](#int32) |  | Configuration ID of hardware |
 | machine | [string](#string) |  | Machine version string |
+| cpuTemp | [double](#double) |  | CPU core temp in °C |
 
 
 
@@ -209,6 +211,25 @@ GazeSubscription message
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | unfiltered | [bool](#bool) |  | If true, unfiltered gaze data will be streamed |
+
+
+
+
+
+
+<a name="GazeFirst-HostSettings"></a>
+
+### HostSettings
+HostSettings message
+Note: only for customized platform-dependent functions - these values do not have to be set.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| update | [bool](#bool) |  | Set to true if the settings should be updated |
+| model | [string](#string) |  | Model |
+| manufacturer | [string](#string) |  | Manufacturer |
+| platform | [string](#string) |  | Platform |
 
 
 
@@ -300,6 +321,7 @@ Settings message
 | size | [ScreenSize](#GazeFirst-ScreenSize) |  | Screen size in mm |
 | userSettings | [UserSettings](#GazeFirst-UserSettings) |  | User settings |
 | deviceSettings | [DeviceSettings](#GazeFirst-DeviceSettings) |  | Device settings |
+| hostSettings | [HostSettings](#GazeFirst-HostSettings) |  | Host settings |
 
 
 
