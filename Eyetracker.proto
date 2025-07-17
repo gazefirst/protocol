@@ -75,7 +75,7 @@ message CalibrationControl {
 		START = 0; //Signal that a calibration should start
 		STOP = 1; //Signal that a calibration should stop
 		IMPROVE = 3; // Improve given points (pointsToImprove)
-		CONFIRM = 4; // Confirm last point (only valid when manualCalibration = true)
+		CONFIRM = 4; // Confirm last point (only valid when manualCalibration = true OR clientConfirmsPointCollection = true)
 	}
 	// Calibration Points (count) enum
 	enum CalibrationPoints {
@@ -96,6 +96,9 @@ message CalibrationControl {
 	repeated int32 pointsToImprove = 7; // List of points (their sequence number) that should be recalibrated / improved
 	bool manualCalibration = 9; // Manual calibration: client needs to confirm every point by sending Control.CONFIRM - multipoint and fixationBased will be ignored
 	int64 timestamp = 10; // Timestamp (unix time) of calibration - set to starting time when sending START
+	bool clientConfirmsPointCollection = 11; // Client needs to confirm the collection for each point after recieving it with status show, sending its sequence number
+	repeated int32 pointsToConfirm = 12; // List of points (their sequence number) to confirm / to start collection
+	int32 pointTimeout = 13; // Point timeout in ms for non multipoint calibrations (will move on after n ms). Set to 0 or leave empty when not used
 }
 
 /**

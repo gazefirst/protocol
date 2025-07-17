@@ -65,6 +65,9 @@ CalibrationControl message
 List of points (their sequence number) that should be recalibrated / improved |
 | manualCalibration | [bool](#bool) |  | Manual calibration: client needs to confirm every point by sending Control.CONFIRM - multipoint and fixationBased will be ignored |
 | timestamp | [int64](#int64) |  | Timestamp (unix time) of calibration - set to starting time when sending START |
+| clientConfirmsPointCollection | [bool](#bool) |  | Client needs to confirm the collection for each point after recieving it with status show, sending its sequence number |
+| pointsToConfirm | [int32](#int32) | repeated | List of points (their sequence number) to confirm / to start collection |
+| pointTimeout | [int32](#int32) |  | Point timeout in ms for non multipoint calibrations (will move on after n ms). Set to 0 or leave empty when not used |
 
 
 
@@ -454,7 +457,7 @@ Control enum
 | START | 0 | Signal that a calibration should start |
 | STOP | 1 | Signal that a calibration should stop |
 | IMPROVE | 3 | Improve given points (pointsToImprove) |
-| CONFIRM | 4 | Confirm last point (only valid when manualCalibration = true) |
+| CONFIRM | 4 | Confirm last point (only valid when manualCalibration = true OR clientConfirmsPointCollection = true) |
 
 
 
